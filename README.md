@@ -1,4 +1,4 @@
-#NexusAI
+# NexusAI
 --
 NexusAI is an all-in-one, AI-powered finance automation platform built for modern businesses. It seamlessly combines automated invoice processing, GST reconciliation, and smart financial analytics—delivering speed, accuracy, and actionable insights with minimal manual intervention.
 
