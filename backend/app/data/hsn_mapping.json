@@ -1,0 +1,12 @@
+{
+    "998231": {
+        "default_category": "18%",
+        "description": "Software Development Services",
+        "reliability_score": 0.9
+    },
+    "998232": {
+        "default_category": "18%",
+        "description": "IT Infrastructure Services",
+        "reliability_score": 0.9
+    }
+}
