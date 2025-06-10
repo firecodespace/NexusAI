@@ -3,3 +3,4 @@ annotation/
 venv/
 venv310/
 models/
+gcloud/
