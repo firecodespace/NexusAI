@@ -4,3 +4,4 @@ venv/
 venv310/
 models/
 gcloud/
+ocr_google.py
