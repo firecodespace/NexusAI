@@ -9,3 +9,5 @@ This module contains base database models and configurations:
 
 Author: Shared
 """
+
+from app.models.invoice import Invoice  # ← Add this here

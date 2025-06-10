@@ -13,6 +13,7 @@ Author: Shared
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from app.api.v1.endpoints.invoice_upload import router as invoice_upload_router
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -24,6 +25,8 @@ app = FastAPI(
     description="AI-powered finance automation platform",
     version="1.0.0"
 )
+
+app.include_router(invoice_upload_router, prefix="/invoices", tags=["Invoices"])
 
 # Configure CORS
 app.add_middleware(

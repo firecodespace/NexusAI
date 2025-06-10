@@ -9,3 +9,13 @@ This module contains application-wide configuration settings:
 
 Author: Shared
 """
+from pydantic_settings import BaseSettings  # ✅ correct for Pydantic v2
+
+
+class Settings(BaseSettings):
+    SQLALCHEMY_DATABASE_URI: str = "sqlite:///./invoices.db"  # or your Postgres URI
+    # other settings like:
+    # ENV: str = "development"
+    # DEBUG: bool = True
+
+settings = Settings()
