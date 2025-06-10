@@ -1,0 +1,1 @@
+[{"id": 1, "invoice_number": "INV-001", "date": "2025-06-10T23:35:59.900886", "vendor": "Sample Vendor 1", "amount": 1500.0, "status": "processed", "due_date": "2025-06-10T23:35:59.900911"}, {"id": 2, "invoice_number": "INV-002", "date": "2025-06-10T23:35:59.900913", "vendor": "Sample Vendor 2", "amount": 2500.0, "status": "pending", "due_date": "2025-06-10T23:35:59.900914"}]
