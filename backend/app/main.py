@@ -36,7 +36,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(invoices_router, prefix="/api/invoices", tags=["Invoices"])
+app.include_router(invoices_router, prefix="/api/v1/invoices", tags=["Invoices"])
 
 @app.get("/")
 async def root():

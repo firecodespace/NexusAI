@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "invoice_number": "INV-001",
+    "date": "2024-03-01T00:00:00",
+    "vendor": "Sample Vendor 1",
+    "amount": 1500.00,
+    "status": "processed",
+    "due_date": "2024-04-01T00:00:00"
+  },
+  {
+    "id": 2,
+    "invoice_number": "INV-002",
+    "date": "2024-03-05T00:00:00",
+    "vendor": "Sample Vendor 2",
+    "amount": 2500.00,
+    "status": "pending",
+    "due_date": "2024-04-05T00:00:00"
+  },
+  {
+    "id": 3,
+    "invoice_number": "INV-003",
+    "date": "2024-03-10T00:00:00",
+    "vendor": "Sample Vendor 1",
+    "amount": 3500.00,
+    "status": "processed",
+    "due_date": "2024-04-10T00:00:00"
+  }
+] 

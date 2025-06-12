@@ -26,23 +26,25 @@ const InvoiceDetail = () => {
   const cardBg = useColorModeValue('white', 'gray.700');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
-  useEffect(() => {
-    const fetchInvoice = async () => {
-      try {
-        const response = await fetch(`http://localhost:8000/api/invoices/${id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch invoice');
-        }
-        const data = await response.json();
-        setInvoice(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchInvoiceDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:8000/api/v1/invoices/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoice details');
       }
-    };
+      const data = await response.json();
+      setInvoice(data);
+    } catch (error) {
+      console.error('Error fetching invoice details:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchInvoice();
+  useEffect(() => {
+    fetchInvoiceDetails();
   }, [id]);
 
   if (loading) {

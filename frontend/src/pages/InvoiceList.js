@@ -20,6 +20,10 @@ import {
   Flex,
   Spinner,
   useToast,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
 } from '@chakra-ui/react';
 import { FiSearch, FiFilter, FiDownload, FiEye } from 'react-icons/fi';
 import { Link as RouterLink } from 'react-router-dom';
@@ -27,6 +31,7 @@ import { Link as RouterLink } from 'react-router-dom';
 const InvoiceList = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortField, setSortField] = useState('date');
@@ -37,14 +42,19 @@ const InvoiceList = () => {
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await fetch(
-        `http://localhost:8000/api/invoices?page=${currentPage}&sort=${sortField}&direction=${sortDirection}&status=${statusFilter}`
+        `http://localhost:8000/api/v1/invoices?page=${currentPage}&sort=${sortField}&direction=${sortDirection}&status=${statusFilter}`
       );
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoices');
+      }
       const data = await response.json();
-      setInvoices(data.invoices);
+      setInvoices(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching invoices:', error);
+      setError(error.message);
       toast({
         title: 'Error',
         description: 'Failed to fetch invoices',
@@ -72,7 +82,7 @@ const InvoiceList = () => {
 
   const handleDownload = async (invoiceId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/invoices/${invoiceId}/download`);
+      const response = await fetch(`http://localhost:8000/api/v1/invoices/${invoiceId}/download`);
       if (!response.ok) throw new Error('Download failed');
       
       const blob = await response.blob();
@@ -105,14 +115,28 @@ const InvoiceList = () => {
     return colors[status] || 'gray';
   };
 
-  const filteredInvoices = invoices.filter((invoice) =>
+  const filteredInvoices = invoices ? invoices.filter((invoice) =>
     Object.values(invoice).some((value) =>
-      value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
     )
-  );
+  ) : [];
 
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const bgColor = useColorModeValue('white', 'gray.700');
+
+  if (error) {
+    return (
+      <Box p={4}>
+        <Alert status="error" borderRadius="md">
+          <AlertIcon />
+          <Box flex="1">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Box>
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box>

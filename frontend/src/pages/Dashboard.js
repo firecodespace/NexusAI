@@ -25,9 +25,36 @@ import {
   AlertTitle,
   AlertDescription,
   useToast,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Badge,
+  Progress,
+  Tooltip,
+  Flex,
+  Divider,
 } from '@chakra-ui/react';
-import { FiUpload, FiFileText, FiRefreshCw } from 'react-icons/fi';
+import { FiUpload, FiFileText, FiRefreshCw, FiTrendingUp, FiDollarSign, FiCalendar, FiCheckCircle, FiAlertCircle, FiClock } from 'react-icons/fi';
 import { Link as RouterLink } from 'react-router-dom';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -51,7 +78,7 @@ const Dashboard = () => {
       setError(null);
       console.log('Fetching dashboard data...');
       
-      const response = await fetch('http://localhost:8000/api/invoices/dashboard');
+      const response = await fetch('http://localhost:8000/api/v1/invoices/dashboard');
       console.log('Response status:', response.status);
       
       if (!response.ok) {
@@ -101,6 +128,26 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'processed':
+        return 'green';
+      case 'pending':
+        return 'yellow';
+      case 'failed':
+        return 'red';
+      default:
+        return 'gray';
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+    }).format(amount);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minH="400px">
@@ -131,7 +178,7 @@ const Dashboard = () => {
   }
 
   return (
-    <Box>
+    <Box p={4}>
       <HStack justify="space-between" mb={6}>
         <Heading size="lg">Dashboard</Heading>
         <Button
@@ -151,6 +198,7 @@ const Dashboard = () => {
           to="/upload"
           leftIcon={<Icon as={FiUpload} />}
           colorScheme="blue"
+          size="lg"
         >
           Upload Invoice
         </Button>
@@ -159,6 +207,7 @@ const Dashboard = () => {
           to="/invoices"
           leftIcon={<Icon as={FiFileText} />}
           variant="outline"
+          size="lg"
         >
           View All Invoices
         </Button>
@@ -166,11 +215,11 @@ const Dashboard = () => {
 
       {/* Statistics */}
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
-        <Card bg={cardBg} borderWidth="1px" borderColor={borderColor}>
+        <Card bg={cardBg} borderColor={borderColor} borderWidth="1px" _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }} transition="all 0.2s">
           <CardBody>
             <Stat>
-              <StatLabel>Total Invoices</StatLabel>
-              <StatNumber>{stats.totalInvoices}</StatNumber>
+              <StatLabel color="gray.500">Total Invoices</StatLabel>
+              <StatNumber fontSize="3xl">{stats.totalInvoices}</StatNumber>
               <StatHelpText>
                 <StatArrow type="increase" />
                 23.36%
@@ -178,90 +227,177 @@ const Dashboard = () => {
             </Stat>
           </CardBody>
         </Card>
-
-        <Card bg={cardBg} borderWidth="1px" borderColor={borderColor}>
+        <Card bg={cardBg} borderColor={borderColor} borderWidth="1px" _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }} transition="all 0.2s">
           <CardBody>
             <Stat>
-              <StatLabel>Processed</StatLabel>
-              <StatNumber>{stats.processedInvoices}</StatNumber>
+              <StatLabel color="gray.500">Processed</StatLabel>
+              <StatNumber fontSize="3xl">{stats.processedInvoices}</StatNumber>
               <StatHelpText>
                 <StatArrow type="increase" />
-                9.05%
+                15.2%
               </StatHelpText>
             </Stat>
           </CardBody>
         </Card>
-
-        <Card bg={cardBg} borderWidth="1px" borderColor={borderColor}>
+        <Card bg={cardBg} borderColor={borderColor} borderWidth="1px" _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }} transition="all 0.2s">
           <CardBody>
             <Stat>
-              <StatLabel>Total Amount</StatLabel>
-              <StatNumber>${stats.totalAmount.toLocaleString()}</StatNumber>
+              <StatLabel color="gray.500">Total Amount</StatLabel>
+              <StatNumber fontSize="3xl">{formatCurrency(stats.totalAmount)}</StatNumber>
               <StatHelpText>
                 <StatArrow type="increase" />
-                14.05%
+                12.5%
               </StatHelpText>
             </Stat>
           </CardBody>
         </Card>
-
-        <Card bg={cardBg} borderWidth="1px" borderColor={borderColor}>
+        <Card bg={cardBg} borderColor={borderColor} borderWidth="1px" _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }} transition="all 0.2s">
           <CardBody>
             <Stat>
-              <StatLabel>Pending Validation</StatLabel>
-              <StatNumber>{stats.pendingValidation}</StatNumber>
+              <StatLabel color="gray.500">Pending Validation</StatLabel>
+              <StatNumber fontSize="3xl">{stats.pendingValidation}</StatNumber>
               <StatHelpText>
                 <StatArrow type="decrease" />
-                3.05%
+                8.1%
               </StatHelpText>
             </Stat>
           </CardBody>
         </Card>
       </SimpleGrid>
 
+      {/* Charts and Analytics */}
+      <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6} mb={8}>
+        <Card bg={cardBg} borderColor={borderColor} borderWidth="1px">
+          <CardHeader>
+            <Heading size="md">Invoice Volume Trend</Heading>
+          </CardHeader>
+          <CardBody>
+            <Box h="300px">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <RechartsTooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="count" stroke="#8884d8" name="Invoices" />
+                </LineChart>
+              </ResponsiveContainer>
+            </Box>
+          </CardBody>
+        </Card>
+
+        <Card bg={cardBg} borderColor={borderColor} borderWidth="1px">
+          <CardHeader>
+            <Heading size="md">Amount Distribution</Heading>
+          </CardHeader>
+          <CardBody>
+            <Box h="300px">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stats.amountDistribution}
+                    dataKey="count"
+                    nameKey="range"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label
+                  >
+                    {stats.amountDistribution?.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </Box>
+          </CardBody>
+        </Card>
+      </Grid>
+
       {/* Recent Invoices */}
-      <Card bg={cardBg} borderWidth="1px" borderColor={borderColor}>
+      <Card bg={cardBg} borderColor={borderColor} borderWidth="1px" mb={8}>
         <CardHeader>
           <Heading size="md">Recent Invoices</Heading>
         </CardHeader>
         <CardBody>
-          {recentInvoices.length === 0 ? (
-            <Text color="gray.500">No recent invoices</Text>
-          ) : (
-            <VStack spacing={4} align="stretch">
-              {recentInvoices.map((invoice) => (
-                <Box
-                  key={invoice.id}
-                  p={4}
-                  borderWidth="1px"
-                  borderRadius="md"
-                  borderColor={borderColor}
-                  _hover={{ bg: hoverBg }}
-                >
-                  <Grid templateColumns="repeat(4, 1fr)" gap={4}>
-                    <Text fontWeight="bold">{invoice.invoice_number}</Text>
-                    <Text>{invoice.vendor}</Text>
-                    <Text>${invoice.amount.toLocaleString()}</Text>
-                    <Text color={invoice.status === 'processed' ? 'green.500' : 'yellow.500'}>
-                      {invoice.status}
+          <VStack spacing={4} align="stretch">
+            {recentInvoices.map((invoice) => (
+              <Card key={invoice.id} variant="outline" p={4}>
+                <Grid templateColumns="1fr auto" gap={4}>
+                  <Box>
+                    <HStack spacing={4}>
+                      <Text fontWeight="bold">{invoice.invoice_number}</Text>
+                      <Badge colorScheme={getStatusColor(invoice.status)}>
+                        {invoice.status}
+                      </Badge>
+                    </HStack>
+                    <Text color="gray.500" mt={1}>
+                      {invoice.vendor}
                     </Text>
-                  </Grid>
-                </Box>
-              ))}
-            </VStack>
-          )}
+                    <Text mt={2}>
+                      Amount: {formatCurrency(invoice.amount)}
+                    </Text>
+                  </Box>
+                  <VStack align="end" spacing={2}>
+                    <Text color="gray.500">
+                      {new Date(invoice.date).toLocaleDateString()}
+                    </Text>
+                    <Button
+                      as={RouterLink}
+                      to={`/invoices/${invoice.id}`}
+                      size="sm"
+                      variant="outline"
+                    >
+                      View Details
+                    </Button>
+                  </VStack>
+                </Grid>
+              </Card>
+            ))}
+          </VStack>
         </CardBody>
-        <CardFooter>
-          <Button
-            as={RouterLink}
-            to="/invoices"
-            variant="ghost"
-            colorScheme="blue"
-            size="sm"
-          >
-            View All Invoices
-          </Button>
-        </CardFooter>
+      </Card>
+
+      {/* Service Status */}
+      <Card bg={cardBg} borderColor={borderColor} borderWidth="1px">
+        <CardHeader>
+          <Heading size="md">Service Status</Heading>
+        </CardHeader>
+        <CardBody>
+          <VStack spacing={4} align="stretch">
+            <HStack justify="space-between">
+              <HStack>
+                <Icon as={FiCheckCircle} color="green.500" />
+                <Text>OCR Service</Text>
+              </HStack>
+              <Badge colorScheme="green">Operational</Badge>
+            </HStack>
+            <HStack justify="space-between">
+              <HStack>
+                <Icon as={FiCheckCircle} color="green.500" />
+                <Text>GST Categorization</Text>
+              </HStack>
+              <Badge colorScheme="green">Operational</Badge>
+            </HStack>
+            <HStack justify="space-between">
+              <HStack>
+                <Icon as={FiCheckCircle} color="green.500" />
+                <Text>Reconciliation</Text>
+              </HStack>
+              <Badge colorScheme="green">Operational</Badge>
+            </HStack>
+            <HStack justify="space-between">
+              <HStack>
+                <Icon as={FiCheckCircle} color="green.500" />
+                <Text>Fraud Detection</Text>
+              </HStack>
+              <Badge colorScheme="green">Operational</Badge>
+            </HStack>
+          </VStack>
+        </CardBody>
       </Card>
     </Box>
   );

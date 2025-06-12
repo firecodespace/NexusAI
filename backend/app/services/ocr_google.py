@@ -1,36 +1,69 @@
 import os
-print("🔐 Google Key Path:", os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
-
 from google.cloud import vision
-from app.services.layoutlm_runner import predict_fields
+from PIL import Image
+import io
+from typing import Dict, List, Tuple
+from .invoice_extraction import extract_fields_with_model
 
-def run_google_vision_and_layoutlm(image_path: str):
-    client = vision.ImageAnnotatorClient()
-    with open(image_path, 'rb') as f:
-        content = f.read()
+def run_google_vision_and_layoutlm(file_path: str) -> Dict[str, str]:
+    """
+    Process an invoice using Google Vision OCR and LayoutLMv3
+    """
+    try:
+        # Initialize Google Vision client
+        client = vision.ImageAnnotatorClient()
 
-    image = vision.Image(content=content)
-    response = client.document_text_detection(image=image)
-    tokens, boxes = [], []
+        # Read the file
+        with open(file_path, 'rb') as image_file:
+            content = image_file.read()
 
-    for page in response.full_text_annotation.pages:
-        for block in page.blocks:
-            for para in block.paragraphs:
-                for word in para.words:
-                    text = ''.join([s.text for s in word.symbols])
-                    if not text.strip():
-                        continue
-                    tokens.append(text)
-                    box = word.bounding_box
-                    x0 = int(min(v.x for v in box.vertices) * 1000)
-                    y0 = int(min(v.y for v in box.vertices) * 1000)
-                    x1 = int(max(v.x for v in box.vertices) * 1000)
-                    y1 = int(max(v.y for v in box.vertices) * 1000)
-                    boxes.append([x0, y0, x1, y1])
+        # Create image object
+        image = vision.Image(content=content)
 
-    print("🧾 Tokens:", tokens[:15])
-    print("📦 Boxes:", boxes[:15])
+        # Perform document text detection
+        response = client.document_text_detection(image=image)
 
-    # LayoutLMv3 model prediction
-    fields = predict_fields(tokens, boxes, image_path)
-    return fields
+        if response.error.message:
+            raise Exception(f"Vision API error: {response.error.message}")
+
+        # Extract text and bounding boxes
+        words = []
+        boxes = []
+        
+        for page in response.full_text_annotation.pages:
+            for block in page.blocks:
+                for paragraph in block.paragraphs:
+                    for word in paragraph.words:
+                        word_text = ''.join([
+                            symbol.text for symbol in word.symbols
+                        ])
+                        words.append(word_text)
+                        
+                        # Get bounding box
+                        vertices = word.bounding_box.vertices
+                        box = [
+                            vertices[0].x,
+                            vertices[0].y,
+                            vertices[2].x,
+                            vertices[2].y
+                        ]
+                        boxes.append(box)
+
+        # Use LayoutLMv3 to extract structured fields
+        fields = extract_fields_with_model(file_path, words, boxes)
+
+        # Add any missing fields with default values
+        required_fields = [
+            "invoice_number", "invoice_date", "due_date", "gstin",
+            "total", "currency", "vendor_name", "vendor_tax_id",
+            "customer_name", "payment_terms"
+        ]
+
+        for field in required_fields:
+            if field not in fields:
+                fields[field] = "N/A"
+
+        return fields
+
+    except Exception as e:
+        raise Exception(f"Error processing invoice: {str(e)}")
