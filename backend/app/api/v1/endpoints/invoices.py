@@ -69,17 +69,27 @@ async def get_dashboard_data():
     for invoice in invoices:
         # Handle both string and datetime objects
         date_str = invoice["date"]
+        date_obj = None
+        
         if isinstance(date_str, str):
             try:
                 date_obj = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
             except ValueError:
-                # Try alternate format if ISO format fails
-                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-        else:
+                try:
+                    # Try alternate format if ISO format fails
+                    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                except ValueError:
+                    # If all parsing fails, skip this invoice
+                    continue
+        elif isinstance(date_str, datetime):
             date_obj = date_str
+        else:
+            # If date is None or invalid type, skip this invoice
+            continue
             
-        month = date_obj.strftime("%Y-%m")
-        monthly_data[month] = monthly_data.get(month, 0) + 1
+        if date_obj is not None:
+            month = date_obj.strftime("%Y-%m")
+            monthly_data[month] = monthly_data.get(month, 0) + 1
     stats["monthlyData"] = [{"month": k, "count": v} for k, v in monthly_data.items()]
     
     # Amount distribution
@@ -90,7 +100,12 @@ async def get_dashboard_data():
         "10000+": 0
     }
     for invoice in invoices:
-        amount = float(invoice["amount"])
+        amount_raw = invoice.get("amount", 0)
+        try:
+            amount = float(amount_raw) if amount_raw is not None else 0.0
+        except (ValueError, TypeError):
+            amount = 0.0
+            
         if amount <= 1000:
             amount_ranges["0-1000"] += 1
         elif amount <= 5000:
@@ -121,9 +136,15 @@ async def get_dashboard_data():
     vendor_counts = {}
     vendor_amounts = {}
     for invoice in invoices:
-        vendor = invoice["vendor"]
+        vendor = invoice.get("vendor", "Unknown Vendor")
         vendor_counts[vendor] = vendor_counts.get(vendor, 0) + 1
-        vendor_amounts[vendor] = vendor_amounts.get(vendor, 0) + float(invoice["amount"])
+        
+        amount_raw = invoice.get("amount", 0)
+        try:
+            amount = float(amount_raw) if amount_raw is not None else 0.0
+        except (ValueError, TypeError):
+            amount = 0.0
+        vendor_amounts[vendor] = vendor_amounts.get(vendor, 0) + amount
     
     stats["topVendors"] = [
         {"vendor": k, "count": v} 
@@ -136,11 +157,62 @@ async def get_dashboard_data():
     ]
     
     # Get recent invoices (last 5)
-    recent_invoices = sorted(invoices, key=lambda x: x["date"], reverse=True)[:5]
+    def get_sortable_date(invoice):
+        date_str = invoice.get("date", "")
+        if isinstance(date_str, str):
+            try:
+                return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            except ValueError:
+                try:
+                    return datetime.strptime(date_str, "%Y-%m-%d")
+                except ValueError:
+                    return datetime.min  # Use minimum date for invalid dates
+        elif isinstance(date_str, datetime):
+            return date_str
+        else:
+            return datetime.min  # Use minimum date for None dates
+    
+    recent_invoices = sorted(invoices, key=get_sortable_date, reverse=True)[:5]
+    
+    # Cash Flow Analysis
+    cash_flow_analysis = analytics_service.analyze_cash_flow(invoices)
+    cash_flow_data = {
+        "totalInflow": cash_flow_analysis.total_inflow,
+        "totalOutflow": cash_flow_analysis.total_outflow,
+        "netCashFlow": cash_flow_analysis.net_cash_flow,
+        "averageDailyFlow": cash_flow_analysis.average_daily_flow,
+        "cashFlowTrend": cash_flow_analysis.cash_flow_trend,
+        "monthlyBreakdown": cash_flow_analysis.monthly_breakdown,
+        "cashFlowForecast": [
+            {
+                "date": forecast.date.strftime("%Y-%m-%d"),
+                "predictedAmount": forecast.predicted_amount,
+                "confidenceInterval": forecast.confidence_interval,
+                "contributingFactors": forecast.contributing_factors
+            }
+            for forecast in cash_flow_analysis.cash_flow_forecast
+        ],
+        "riskFactors": cash_flow_analysis.risk_factors
+    }
+    
+    # GST Compliance Analysis
+    gst_analysis = analytics_service.analyze_gst_compliance(invoices)
+    gst_data = {
+        "totalGstCollected": gst_analysis.total_gst_collected,
+        "totalGstPaid": gst_analysis.total_gst_paid,
+        "netGstLiability": gst_analysis.net_gst_liability,
+        "complianceScore": gst_analysis.compliance_score,
+        "complianceStatus": gst_analysis.compliance_status.value,
+        "gstReturnsDue": gst_analysis.gst_returns_due,
+        "gstPenalties": gst_analysis.gst_penalties,
+        "gstRecommendations": gst_analysis.gst_recommendations
+    }
     
     return {
         "stats": stats,
-        "recentInvoices": recent_invoices
+        "recentInvoices": recent_invoices,
+        "cashFlowAnalysis": cash_flow_data,
+        "gstComplianceAnalysis": gst_data
     }
 
 # API Endpoints
@@ -249,9 +321,20 @@ async def process_invoice(invoice_id: int):
         results = {
             "ocr": {
                 "invoice_number": None,
+                "receipt_number": None,
                 "date": None,
+                "time": None,
                 "vendor": None,
+                "vendor_address": None,
+                "vendor_phone": None,
+                "vendor_fax": None,
                 "amount": None,
+                "subtotal": None,
+                "discount": None,
+                "gst_amount": None,
+                "salesperson": None,
+                "cashier": None,
+                "items": [],
                 "confidence": 0
             },
             "gst": {
@@ -281,9 +364,20 @@ async def process_invoice(invoice_id: int):
             # Update OCR results
             results["ocr"].update({
                 "invoice_number": ocr_data.get("invoice_number", "N/A"),
+                "receipt_number": ocr_data.get("receipt_number", "N/A"),
                 "date": ocr_data.get("date", "N/A"),
+                "time": ocr_data.get("time", "N/A"),
                 "vendor": ocr_data.get("vendor", "N/A"),
+                "vendor_address": ocr_data.get("vendor_address", "N/A"),
+                "vendor_phone": ocr_data.get("vendor_phone", "N/A"),
+                "vendor_fax": ocr_data.get("vendor_fax", "N/A"),
                 "amount": ocr_data.get("amount", 0),
+                "subtotal": ocr_data.get("subtotal", 0),
+                "discount": ocr_data.get("discount", 0),
+                "gst_amount": ocr_data.get("gst_amount", 0),
+                "salesperson": ocr_data.get("salesperson", "N/A"),
+                "cashier": ocr_data.get("cashier", "N/A"),
+                "items": ocr_data.get("items", []),
                 "confidence": 95.5  # Confidence score from Google Vision API
             })
             
@@ -304,10 +398,10 @@ async def process_invoice(invoice_id: int):
             # Run GST categorization
             gst_result = gst_service.categorize_invoice(invoice)
             results["gst"].update({
-                "gstin": gst_result.gstin,
+                "gstin": invoice.get("gstin", "N/A"),  # Use GSTIN from invoice data, not from result
                 "hsn_code": gst_result.hsn_code,
                 "category": gst_result.category.value,
-                "tax_rate": gst_result.tax_rate,
+                "tax_rate": gst_result.category.value,  # Use category value as tax rate
                 "status": "success"
             })
         except Exception as e:
@@ -320,10 +414,18 @@ async def process_invoice(invoice_id: int):
                 invoice,
                 {"gstin": invoice.get("gstin", "")}  # Use extracted GSTIN
             )
+            
+            # Safely convert amount
+            amount_raw = invoice.get("amount", 0)
+            try:
+                matched_amount = float(amount_raw) if amount_raw is not None else 0.0
+            except (ValueError, TypeError):
+                matched_amount = 0.0
+                
             results["reconciliation"].update({
-                "matched_amount": float(invoice.get("amount", 0)),
+                "matched_amount": matched_amount,
                 "discrepancy": 0.0,
-                "confidence": 98.5,
+                "confidence": reconciliation_result.confidence_score,  # Use actual confidence score
                 "status": reconciliation_result.status.value
             })
         except Exception as e:
@@ -337,7 +439,7 @@ async def process_invoice(invoice_id: int):
                 [inv for inv in invoices if inv["id"] != invoice_id]  # Historical data
             )
             results["fraud"].update({
-                "risk_score": fraud_result.risk_score,
+                "risk_score": fraud_result.anomaly_score,
                 "risk_level": fraud_result.risk_level.value,
                 "alerts": [
                     {

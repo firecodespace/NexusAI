@@ -90,8 +90,17 @@ class ReconciliationService:
         
     def _validate_amount_match(self, invoice_data: Dict, vendor_data: Dict) -> bool:
         """Validate if amounts match within tolerance"""
-        invoice_amount = float(invoice_data.get('total_amount', 0))
-        vendor_amount = float(vendor_data.get('expected_amount', 0))
+        # Handle None values and use correct field name
+        invoice_amount_raw = invoice_data.get('amount', 0)
+        vendor_amount_raw = vendor_data.get('expected_amount', 0)
+        
+        # Convert to float safely
+        try:
+            invoice_amount = float(invoice_amount_raw) if invoice_amount_raw is not None else 0.0
+            vendor_amount = float(vendor_amount_raw) if vendor_amount_raw is not None else 0.0
+        except (ValueError, TypeError):
+            # If conversion fails, return False
+            return False
         
         # Define tolerance (e.g., 0.1% difference allowed)
         tolerance = 0.001

@@ -24,7 +24,7 @@ def test_invoice_upload_endpoint(sample_invoice_path):
     # Test file upload
     with open(sample_invoice_path, "rb") as f:
         response = client.post(
-            "/invoices/upload",
+            "/api/v1/invoices/upload",
             files={"file": ("sample_invoice.pdf", f, "application/pdf")}
         )
     
@@ -33,24 +33,22 @@ def test_invoice_upload_endpoint(sample_invoice_path):
 
 def test_invoice_processing():
     # Test invoice processing endpoint
-    response = client.get("/invoices/process/1")  # Assuming invoice ID 1 exists
+    response = client.post("/api/v1/invoices/1/process")  # Assuming invoice ID 1 exists
     assert response.status_code == 200
-    assert "status" in response.json()
-    assert "extracted_data" in response.json()
+    assert "ocr" in response.json()
+    assert "gst" in response.json()
 
-def test_invoice_validation():
-    # Test invoice data validation
-    test_data = {
-        "invoice_number": "INV-001",
-        "date": "2024-03-20",
-        "amount": 1000.00,
-        "vendor": "Test Vendor"
-    }
-    
-    response = client.post("/invoices/validate", json=test_data)
+def test_invoice_list():
+    # Test getting list of invoices
+    response = client.get("/api/v1/invoices/")
     assert response.status_code == 200
-    assert "is_valid" in response.json()
-    assert "validation_errors" in response.json()
+    assert isinstance(response.json(), list)
+
+def test_invoice_detail():
+    # Test getting specific invoice details
+    response = client.get("/api/v1/invoices/1")  # Assuming invoice ID 1 exists
+    assert response.status_code == 200
+    assert "invoice_number" in response.json()
 
 @pytest.fixture(autouse=True)
 def cleanup():

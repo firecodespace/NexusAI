@@ -109,10 +109,22 @@ const InvoiceUpload = () => {
         setProcessingResults({
           ocr: {
             invoice_number: processData.ocr?.invoice_number || 'N/A',
+            receipt_number: processData.ocr?.receipt_number || 'N/A',
             date: processData.ocr?.date || 'N/A',
+            time: processData.ocr?.time || 'N/A',
             vendor: processData.ocr?.vendor || 'N/A',
+            vendor_address: processData.ocr?.vendor_address || 'N/A',
+            vendor_phone: processData.ocr?.vendor_phone || 'N/A',
+            vendor_fax: processData.ocr?.vendor_fax || 'N/A',
             amount: processData.ocr?.amount || 0,
-            confidence: processData.ocr?.confidence || 0
+            subtotal: processData.ocr?.subtotal || 0,
+            discount: processData.ocr?.discount || 0,
+            gst_amount: processData.ocr?.gst_amount || 0,
+            salesperson: processData.ocr?.salesperson || 'N/A',
+            cashier: processData.ocr?.cashier || 'N/A',
+            items: processData.ocr?.items || [],
+            confidence: processData.ocr?.confidence || 0,
+            raw_text: processData.ocr?.raw_text || 'No text extracted'
           },
           gst: {
             gstin: processData.gst?.gstin || 'N/A',
@@ -280,6 +292,7 @@ const InvoiceUpload = () => {
               <Tabs variant="enclosed" colorScheme="blue">
                 <TabList>
                   <Tab>OCR Results</Tab>
+                  <Tab>Raw OCR Text</Tab>
                   <Tab>GST Analysis</Tab>
                   <Tab>Reconciliation</Tab>
                   <Tab>Fraud Detection</Tab>
@@ -288,44 +301,255 @@ const InvoiceUpload = () => {
                 <TabPanels>
                   {/* OCR Results */}
                   <TabPanel>
-                    <VStack spacing={4} align="stretch">
-                      <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                        <GridItem>
-                          <Stat>
-                            <StatLabel>Invoice Number</StatLabel>
-                            <StatNumber>{processingResults.ocr?.invoice_number || 'N/A'}</StatNumber>
-                          </Stat>
-                        </GridItem>
-                        <GridItem>
-                          <Stat>
-                            <StatLabel>Date</StatLabel>
-                            <StatNumber>{processingResults.ocr?.date || 'N/A'}</StatNumber>
-                          </Stat>
-                        </GridItem>
-                        <GridItem>
-                          <Stat>
-                            <StatLabel>Vendor</StatLabel>
-                            <StatNumber>{processingResults.ocr?.vendor || 'N/A'}</StatNumber>
-                          </Stat>
-                        </GridItem>
-                        <GridItem>
-                          <Stat>
-                            <StatLabel>Amount</StatLabel>
-                            <StatNumber>
-                              {processingResults.ocr?.amount
-                                ? formatCurrency(processingResults.ocr.amount)
-                                : 'N/A'}
-                            </StatNumber>
-                          </Stat>
-                        </GridItem>
-                      </Grid>
+                    <VStack spacing={6} align="stretch">
+                      {/* Basic Information */}
+                      <Box>
+                        <Heading size="sm" mb={4} color="blue.600">Basic Information</Heading>
+                        <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Invoice Number</StatLabel>
+                              <StatNumber fontSize="lg">{processingResults.ocr?.invoice_number || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Receipt Number</StatLabel>
+                              <StatNumber fontSize="lg">{processingResults.ocr?.receipt_number || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Date</StatLabel>
+                              <StatNumber fontSize="lg">{processingResults.ocr?.date || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Time</StatLabel>
+                              <StatNumber fontSize="lg">{processingResults.ocr?.time || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                        </Grid>
+                      </Box>
+
                       <Divider />
-                      <HStack justify="space-between">
-                        <Text>Confidence Score</Text>
-                        <Badge colorScheme="green">
+
+                      {/* Vendor Information */}
+                      <Box>
+                        <Heading size="sm" mb={4} color="blue.600">Vendor Information</Heading>
+                        <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                          <GridItem colSpan={2}>
+                            <Stat>
+                              <StatLabel>Vendor Name</StatLabel>
+                              <StatNumber fontSize="lg">{processingResults.ocr?.vendor || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem colSpan={2}>
+                            <Stat>
+                              <StatLabel>Address</StatLabel>
+                              <StatNumber fontSize="md">{processingResults.ocr?.vendor_address || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Phone</StatLabel>
+                              <StatNumber fontSize="lg">{processingResults.ocr?.vendor_phone || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Fax</StatLabel>
+                              <StatNumber fontSize="lg">{processingResults.ocr?.vendor_fax || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                        </Grid>
+                      </Box>
+
+                      <Divider />
+
+                      {/* Amount Information */}
+                      <Box>
+                        <Heading size="sm" mb={4} color="blue.600">Amount Details</Heading>
+                        <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Total Amount</StatLabel>
+                              <StatNumber fontSize="lg" color="green.600">
+                                {processingResults.ocr?.amount
+                                  ? formatCurrency(processingResults.ocr.amount)
+                                  : 'N/A'}
+                              </StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Subtotal</StatLabel>
+                              <StatNumber fontSize="lg">
+                                {processingResults.ocr?.subtotal
+                                  ? formatCurrency(processingResults.ocr.subtotal)
+                                  : 'N/A'}
+                              </StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Discount</StatLabel>
+                              <StatNumber fontSize="lg" color="orange.600">
+                                {processingResults.ocr?.discount
+                                  ? formatCurrency(processingResults.ocr.discount)
+                                  : 'N/A'}
+                              </StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>GST Amount</StatLabel>
+                              <StatNumber fontSize="lg" color="purple.600">
+                                {processingResults.ocr?.gst_amount
+                                  ? formatCurrency(processingResults.ocr.gst_amount)
+                                  : 'N/A'}
+                              </StatNumber>
+                            </Stat>
+                          </GridItem>
+                        </Grid>
+                      </Box>
+
+                      <Divider />
+
+                      {/* Staff Information */}
+                      <Box>
+                        <Heading size="sm" mb={4} color="blue.600">Staff Information</Heading>
+                        <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Salesperson</StatLabel>
+                              <StatNumber fontSize="lg">{processingResults.ocr?.salesperson || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Cashier</StatLabel>
+                              <StatNumber fontSize="lg">{processingResults.ocr?.cashier || 'N/A'}</StatNumber>
+                            </Stat>
+                          </GridItem>
+                        </Grid>
+                      </Box>
+
+                      {/* Item Details */}
+                      {processingResults.ocr?.items && processingResults.ocr.items.length > 0 && (
+                        <>
+                          <Divider />
+                          <Box>
+                            <Heading size="sm" mb={4} color="blue.600">Item Details</Heading>
+                            <Box
+                              borderWidth="1px"
+                              borderRadius="md"
+                              borderColor={borderColor}
+                              overflow="hidden"
+                            >
+                              <Box
+                                bg={useColorModeValue('gray.50', 'gray.700')}
+                                px={4}
+                                py={2}
+                                borderBottomWidth="1px"
+                                borderColor={borderColor}
+                              >
+                                <Grid templateColumns="1fr 2fr 1fr" gap={4}>
+                                  <Text fontWeight="bold">Code</Text>
+                                  <Text fontWeight="bold">Description</Text>
+                                  <Text fontWeight="bold">Amount</Text>
+                                </Grid>
+                              </Box>
+                              {processingResults.ocr.items.map((item, index) => (
+                                <Box
+                                  key={index}
+                                  px={4}
+                                  py={3}
+                                  borderBottomWidth={index < processingResults.ocr.items.length - 1 ? "1px" : "0"}
+                                  borderColor={borderColor}
+                                  _hover={{ bg: useColorModeValue('gray.50', 'gray.600') }}
+                                >
+                                  <Grid templateColumns="1fr 2fr 1fr" gap={4}>
+                                    <Text fontSize="sm" fontFamily="mono">{item.code}</Text>
+                                    <Text fontSize="sm">{item.description}</Text>
+                                    <Text fontSize="sm" fontWeight="bold">
+                                      {formatCurrency(item.amount)}
+                                    </Text>
+                                  </Grid>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Box>
+                        </>
+                      )}
+
+                      <Divider />
+
+                      {/* Confidence Score */}
+                      <HStack justify="space-between" p={4} bg={useColorModeValue('blue.50', 'blue.900')} borderRadius="md">
+                        <Text fontWeight="bold">OCR Confidence Score</Text>
+                        <Badge colorScheme="green" fontSize="md" px={3} py={1}>
                           {processingResults.ocr?.confidence || 'N/A'}%
                         </Badge>
                       </HStack>
+                    </VStack>
+                  </TabPanel>
+
+                  {/* Raw OCR Text */}
+                  <TabPanel>
+                    <VStack spacing={4} align="stretch">
+                      <Box>
+                        <Heading size="sm" mb={4} color="blue.600">Extracted Text</Heading>
+                        <Box
+                          p={4}
+                          bg={useColorModeValue('gray.50', 'gray.700')}
+                          borderRadius="md"
+                          borderWidth="1px"
+                          borderColor={borderColor}
+                          maxH="400px"
+                          overflowY="auto"
+                        >
+                          <Text
+                            fontFamily="mono"
+                            fontSize="sm"
+                            whiteSpace="pre-wrap"
+                            wordBreak="break-word"
+                          >
+                            {processingResults.ocr?.raw_text || 'No text extracted'}
+                          </Text>
+                        </Box>
+                      </Box>
+                      
+                      <Box>
+                        <Heading size="sm" mb={4} color="blue.600">Text Statistics</Heading>
+                        <Grid templateColumns="repeat(3, 1fr)" gap={4}>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Characters</StatLabel>
+                              <StatNumber fontSize="lg">
+                                {processingResults.ocr?.raw_text ? processingResults.ocr.raw_text.length : 0}
+                              </StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Words</StatLabel>
+                              <StatNumber fontSize="lg">
+                                {processingResults.ocr?.raw_text ? processingResults.ocr.raw_text.split(/\s+/).length : 0}
+                              </StatNumber>
+                            </Stat>
+                          </GridItem>
+                          <GridItem>
+                            <Stat>
+                              <StatLabel>Lines</StatLabel>
+                              <StatNumber fontSize="lg">
+                                {processingResults.ocr?.raw_text ? processingResults.ocr.raw_text.split('\n').length : 0}
+                              </StatNumber>
+                            </Stat>
+                          </GridItem>
+                        </Grid>
+                      </Box>
                     </VStack>
                   </TabPanel>
 

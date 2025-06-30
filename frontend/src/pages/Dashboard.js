@@ -64,6 +64,8 @@ const Dashboard = () => {
     pendingValidation: 0,
   });
   const [recentInvoices, setRecentInvoices] = useState([]);
+  const [cashFlowAnalysis, setCashFlowAnalysis] = useState(null);
+  const [gstComplianceAnalysis, setGstComplianceAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const toast = useToast();
@@ -102,6 +104,8 @@ const Dashboard = () => {
         pendingValidation: 0,
       });
       setRecentInvoices(data.recentInvoices || []);
+      setCashFlowAnalysis(data.cashFlowAnalysis || null);
+      setGstComplianceAnalysis(data.gstComplianceAnalysis || null);
       
       toast({
         title: 'Dashboard updated',
@@ -316,6 +320,242 @@ const Dashboard = () => {
           </CardBody>
         </Card>
       </Grid>
+
+      {/* Cash Flow Analysis */}
+      {cashFlowAnalysis && (
+        <Card bg={cardBg} borderColor={borderColor} borderWidth="1px" mb={8}>
+          <CardHeader>
+            <Heading size="md">Cash Flow Analysis</Heading>
+          </CardHeader>
+          <CardBody>
+            <VStack spacing={6} align="stretch">
+              {/* Cash Flow Overview */}
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
+                <Stat>
+                  <StatLabel>Total Inflow</StatLabel>
+                  <StatNumber color="green.600">{formatCurrency(cashFlowAnalysis.totalInflow)}</StatNumber>
+                </Stat>
+                <Stat>
+                  <StatLabel>Total Outflow</StatLabel>
+                  <StatNumber color="red.600">{formatCurrency(cashFlowAnalysis.totalOutflow)}</StatNumber>
+                </Stat>
+                <Stat>
+                  <StatLabel>Net Cash Flow</StatLabel>
+                  <StatNumber color={cashFlowAnalysis.netCashFlow >= 0 ? "green.600" : "red.600"}>
+                    {formatCurrency(cashFlowAnalysis.netCashFlow)}
+                  </StatNumber>
+                </Stat>
+                <Stat>
+                  <StatLabel>Daily Average</StatLabel>
+                  <StatNumber>{formatCurrency(cashFlowAnalysis.averageDailyFlow)}</StatNumber>
+                </Stat>
+              </SimpleGrid>
+
+              {/* Cash Flow Trend */}
+              <Box>
+                <HStack justify="space-between" mb={4}>
+                  <Text fontWeight="bold">Cash Flow Trend</Text>
+                  <Badge 
+                    colorScheme={
+                      cashFlowAnalysis.cashFlowTrend === "increasing" ? "green" :
+                      cashFlowAnalysis.cashFlowTrend === "decreasing" ? "red" : "yellow"
+                    }
+                  >
+                    {cashFlowAnalysis.cashFlowTrend.toUpperCase()}
+                  </Badge>
+                </HStack>
+              </Box>
+
+              {/* Monthly Breakdown Chart */}
+              {cashFlowAnalysis.monthlyBreakdown && cashFlowAnalysis.monthlyBreakdown.length > 0 && (
+                <Box>
+                  <Text fontWeight="bold" mb={4}>Monthly Cash Flow</Text>
+                  <Box h="300px">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={cashFlowAnalysis.monthlyBreakdown}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <RechartsTooltip formatter={(value) => formatCurrency(value)} />
+                        <Legend />
+                        <Bar dataKey="total_amount" fill="#8884d8" name="Total Amount" />
+                        <Bar dataKey="gst_collected" fill="#82ca9d" name="GST Collected" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Cash Flow Forecast */}
+              {cashFlowAnalysis.cashFlowForecast && cashFlowAnalysis.cashFlowForecast.length > 0 && (
+                <Box>
+                  <Text fontWeight="bold" mb={4}>3-Month Cash Flow Forecast</Text>
+                  <VStack spacing={3} align="stretch">
+                    {cashFlowAnalysis.cashFlowForecast.map((forecast, index) => (
+                      <Card key={index} variant="outline" p={4}>
+                        <Grid templateColumns="1fr auto" gap={4}>
+                          <Box>
+                            <Text fontWeight="bold">{forecast.date}</Text>
+                            <Text color="gray.500">
+                              Predicted: {formatCurrency(forecast.predictedAmount)}
+                            </Text>
+                            <Text fontSize="sm" color="gray.400">
+                              Confidence: {formatCurrency(forecast.confidenceInterval[0])} - {formatCurrency(forecast.confidenceInterval[1])}
+                            </Text>
+                          </Box>
+                          <VStack align="end" spacing={1}>
+                            {forecast.contributingFactors.map((factor, idx) => (
+                              <Badge key={idx} colorScheme="blue" size="sm">
+                                {factor}
+                              </Badge>
+                            ))}
+                          </VStack>
+                        </Grid>
+                      </Card>
+                    ))}
+                  </VStack>
+                </Box>
+              )}
+
+              {/* Risk Factors */}
+              {cashFlowAnalysis.riskFactors && cashFlowAnalysis.riskFactors.length > 0 && (
+                <Box>
+                  <Text fontWeight="bold" mb={4}>Risk Factors</Text>
+                  <VStack spacing={2} align="stretch">
+                    {cashFlowAnalysis.riskFactors.map((risk, index) => (
+                      <Alert key={index} status="warning" borderRadius="md">
+                        <AlertIcon />
+                        <Text>{risk}</Text>
+                      </Alert>
+                    ))}
+                  </VStack>
+                </Box>
+              )}
+            </VStack>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* GST Compliance Analysis */}
+      {gstComplianceAnalysis && (
+        <Card bg={cardBg} borderColor={borderColor} borderWidth="1px" mb={8}>
+          <CardHeader>
+            <Heading size="md">GST Compliance Analysis</Heading>
+          </CardHeader>
+          <CardBody>
+            <VStack spacing={6} align="stretch">
+              {/* GST Overview */}
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
+                <Stat>
+                  <StatLabel>GST Collected</StatLabel>
+                  <StatNumber color="green.600">{formatCurrency(gstComplianceAnalysis.totalGstCollected)}</StatNumber>
+                </Stat>
+                <Stat>
+                  <StatLabel>GST Paid</StatLabel>
+                  <StatNumber color="blue.600">{formatCurrency(gstComplianceAnalysis.totalGstPaid)}</StatNumber>
+                </Stat>
+                <Stat>
+                  <StatLabel>Net GST Liability</StatLabel>
+                  <StatNumber color={gstComplianceAnalysis.netGstLiability >= 0 ? "red.600" : "green.600"}>
+                    {formatCurrency(gstComplianceAnalysis.netGstLiability)}
+                  </StatNumber>
+                </Stat>
+                <Stat>
+                  <StatLabel>Compliance Score</StatLabel>
+                  <StatNumber>
+                    <Progress 
+                      value={gstComplianceAnalysis.complianceScore} 
+                      colorScheme={
+                        gstComplianceAnalysis.complianceScore >= 90 ? "green" :
+                        gstComplianceAnalysis.complianceScore >= 70 ? "yellow" : "red"
+                      }
+                      size="sm"
+                      borderRadius="md"
+                    />
+                    <Text fontSize="sm" mt={1}>{gstComplianceAnalysis.complianceScore.toFixed(1)}%</Text>
+                  </StatNumber>
+                </Stat>
+              </SimpleGrid>
+
+              {/* Compliance Status */}
+              <Box>
+                <HStack justify="space-between" mb={4}>
+                  <Text fontWeight="bold">Compliance Status</Text>
+                  <Badge 
+                    colorScheme={
+                      gstComplianceAnalysis.complianceStatus === "COMPLIANT" ? "green" :
+                      gstComplianceAnalysis.complianceStatus === "WARNING" ? "yellow" :
+                      gstComplianceAnalysis.complianceStatus === "NON_COMPLIANT" ? "red" : "gray"
+                    }
+                    size="lg"
+                  >
+                    {gstComplianceAnalysis.complianceStatus}
+                  </Badge>
+                </HStack>
+              </Box>
+
+              {/* GST Returns Due */}
+              {gstComplianceAnalysis.gstReturnsDue && gstComplianceAnalysis.gstReturnsDue.length > 0 && (
+                <Box>
+                  <Text fontWeight="bold" mb={4}>GST Returns Due</Text>
+                  <VStack spacing={3} align="stretch">
+                    {gstComplianceAnalysis.gstReturnsDue.map((gstReturn, index) => (
+                      <Card key={index} variant="outline" p={4}>
+                        <Grid templateColumns="1fr auto" gap={4}>
+                          <Box>
+                            <Text fontWeight="bold">Period: {gstReturn.period}</Text>
+                            <Text color="gray.500">Due Date: {gstReturn.due_date}</Text>
+                            <Text mt={2}>GST Amount: {formatCurrency(gstReturn.gst_amount)}</Text>
+                          </Box>
+                          <VStack align="end" spacing={2}>
+                            <Badge colorScheme="orange">{gstReturn.status}</Badge>
+                          </VStack>
+                        </Grid>
+                      </Card>
+                    ))}
+                  </VStack>
+                </Box>
+              )}
+
+              {/* GST Penalties */}
+              {gstComplianceAnalysis.gstPenalties && gstComplianceAnalysis.gstPenalties.length > 0 && (
+                <Box>
+                  <Text fontWeight="bold" mb={4}>Potential Penalties</Text>
+                  <VStack spacing={3} align="stretch">
+                    {gstComplianceAnalysis.gstPenalties.map((penalty, index) => (
+                      <Alert key={index} status="error" borderRadius="md">
+                        <AlertIcon />
+                        <Box flex="1">
+                          <AlertTitle>{penalty.type}</AlertTitle>
+                          <AlertDescription>
+                            {penalty.description} - Amount: {formatCurrency(penalty.amount)}
+                          </AlertDescription>
+                        </Box>
+                        <Badge colorScheme="red">{penalty.severity}</Badge>
+                      </Alert>
+                    ))}
+                  </VStack>
+                </Box>
+              )}
+
+              {/* GST Recommendations */}
+              {gstComplianceAnalysis.gstRecommendations && gstComplianceAnalysis.gstRecommendations.length > 0 && (
+                <Box>
+                  <Text fontWeight="bold" mb={4}>Recommendations</Text>
+                  <VStack spacing={2} align="stretch">
+                    {gstComplianceAnalysis.gstRecommendations.map((recommendation, index) => (
+                      <Alert key={index} status="info" borderRadius="md">
+                        <AlertIcon />
+                        <Text>{recommendation}</Text>
+                      </Alert>
+                    ))}
+                  </VStack>
+                </Box>
+              )}
+            </VStack>
+          </CardBody>
+        </Card>
+      )}
 
       {/* Recent Invoices */}
       <Card bg={cardBg} borderColor={borderColor} borderWidth="1px" mb={8}>
