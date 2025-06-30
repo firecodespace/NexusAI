@@ -89,3 +89,5 @@ wheels/
 
 
 node_modules/
+
+google-vision-key.json/
